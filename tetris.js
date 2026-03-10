@@ -179,7 +179,10 @@ function finalizeLineClear() {
 }
 
 function update(time, delta) {
-    if (gameOver) return;
+    if (gameOver) {
+        draw.call(this);
+        return;
+    }
 
     if (clearingRows.length > 0) {
         particles.forEach(p => {
