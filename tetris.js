@@ -364,6 +364,17 @@ document.getElementById('play-again-btn').addEventListener('click', resetGame);
 document.getElementById('header-restart').addEventListener('click', resetGame);
 
 document.getElementById('quit-btn').addEventListener('click', () => {
-    alert("Thanks for playing!");
-    window.location.reload();
+    document.getElementById('game-over-overlay').style.display = 'none';
+    document.getElementById('quit-confirm-overlay').style.display = 'flex';
+});
+
+document.getElementById('confirm-yes-btn').addEventListener('click', () => {
+    document.getElementById('quit-confirm-overlay').style.display = 'none';
+    document.getElementById('thank-you-overlay').style.display = 'flex';
+    gameOver = true; // Ensure game logic remains stopped
+});
+
+document.getElementById('confirm-no-btn').addEventListener('click', () => {
+    document.getElementById('quit-confirm-overlay').style.display = 'none';
+    document.getElementById('game-over-overlay').style.display = 'flex';
 });
