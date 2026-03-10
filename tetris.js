@@ -415,7 +415,13 @@ function setupTouchGestures() {
 
 // Event Listeners for UI Buttons
 document.getElementById('play-again-btn').addEventListener('click', resetGame);
-document.getElementById('header-restart').addEventListener('click', resetGame);
+document.getElementById('header-restart').addEventListener('click', (e) => {
+    if (e.target.innerText.toUpperCase() === 'RELOAD') {
+        location.reload();
+    } else {
+        resetGame();
+    }
+});
 
 document.getElementById('quit-btn').addEventListener('click', () => {
     document.getElementById('game-over-overlay').style.display = 'none';
@@ -426,6 +432,8 @@ document.getElementById('confirm-yes-btn').addEventListener('click', () => {
     document.getElementById('quit-confirm-overlay').style.display = 'none';
     document.getElementById('thank-you-overlay').style.display = 'flex';
     gameOver = true; // Ensure game logic remains stopped
+    const headerRestart = document.getElementById('header-restart');
+    if (headerRestart) headerRestart.innerText = 'RELOAD';
 });
 
 document.getElementById('confirm-no-btn').addEventListener('click', () => {
