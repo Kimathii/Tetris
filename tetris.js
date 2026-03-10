@@ -34,6 +34,7 @@ const game = new Phaser.Game(config);
 
 let grid = [];
 let activePiece = null;
+let nextPieceType = null;
 let lastDropTime = 0;
 let dropInterval = 800;
 let score = 0;
@@ -61,8 +62,18 @@ function create() {
 
 function spawnPiece() {
     const keys = Object.keys(TETROMINOES);
-    const type = keys[Math.floor(Math.random() * keys.length)];
+
+    // Initialize nextPieceType if it's the first spawn
+    if (!nextPieceType) {
+        nextPieceType = keys[Math.floor(Math.random() * keys.length)];
+    }
+
+    const type = nextPieceType;
     const tetromino = TETROMINOES[type];
+
+    // Generate the next piece for the queue
+    nextPieceType = keys[Math.floor(Math.random() * keys.length)];
+    drawNextPiece();
 
     activePiece = {
         type: type,
@@ -75,6 +86,48 @@ function spawnPiece() {
     if (checkCollision(activePiece.x, activePiece.y, activePiece.shape)) {
         gameOver = true;
     }
+}
+
+function drawNextPiece() {
+    const canvas = document.getElementById('next-block-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Clear previous drawing
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (!nextPieceType) return;
+
+    const tetromino = TETROMINOES[nextPieceType];
+    const shape = tetromino.shape;
+    const colorHex = '#' + tetromino.color.toString(16).padStart(6, '0');
+
+    // Calculate size to fit in 40x40 canvas with a bit of padding
+    const blockSize = 8;
+    const shapeWidth = shape[0].length * blockSize;
+    const shapeHeight = shape.length * blockSize;
+
+    // Center the shape in the canvas
+    const offsetX = (canvas.width - shapeWidth) / 2;
+    const offsetY = (canvas.height - shapeHeight) / 2;
+
+    ctx.fillStyle = colorHex;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+
+    shape.forEach((row, r) => {
+        row.forEach((value, c) => {
+            if (value) {
+                const x = offsetX + c * blockSize;
+                const y = offsetY + r * blockSize;
+                // Draw filled block
+                ctx.beginPath();
+                ctx.roundRect(x, y, blockSize - 1, blockSize - 1, 2);
+                ctx.fill();
+                ctx.stroke();
+            }
+        });
+    });
 }
 
 function checkCollision(x, y, shape) {
@@ -297,6 +350,7 @@ function resetGame() {
     gameOver = false;
     clearingRows = [];
     particles = [];
+    nextPieceType = null; // Reset the queue
 
     const scoreEl = document.getElementById('score');
     if (scoreEl) scoreEl.innerText = '0000';
@@ -378,3 +432,54 @@ document.getElementById('confirm-no-btn').addEventListener('click', () => {
     document.getElementById('quit-confirm-overlay').style.display = 'none';
     document.getElementById('game-over-overlay').style.display = 'flex';
 });
+
+// Loading Screen Logic
+const hints = [
+    "tap to rotate the block",
+    "swipe down to drop the block",
+    "swipe left and right to direct the block"
+];
+
+function initLoadingScreen() {
+    console.log("Initializing Loading Screen...");
+    const loadingScreen = document.getElementById('loading-screen');
+    const hintText = document.getElementById('hint-text');
+    const mainWrapper = document.querySelector('.main-wrapper');
+
+    if (!loadingScreen || !mainWrapper) {
+        console.error("Loading screen elements not found");
+        return;
+    }
+
+    // Select a single random hint for this session
+    if (hintText) {
+        const randomHint = hints[Math.floor(Math.random() * hints.length)];
+        hintText.innerText = randomHint;
+    }
+
+    // Fail-safe and Transition
+    const finishLoading = () => {
+        console.log("Finishing loading...");
+        loadingScreen.style.opacity = '0';
+        setTimeout(() => {
+            loadingScreen.style.display = 'none';
+            loadingScreen.style.visibility = 'hidden';
+            mainWrapper.style.display = 'flex';
+
+            // Trigger Phaser resize if needed
+            if (window.game && window.game.scale) {
+                window.game.scale.refresh();
+            }
+        }, 500);
+    };
+
+    // Set timeout to finish loading after 2 seconds
+    setTimeout(finishLoading, 2000);
+}
+
+// Run immediately as the script is at the end of the body
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initLoadingScreen);
+} else {
+    initLoadingScreen();
+}
