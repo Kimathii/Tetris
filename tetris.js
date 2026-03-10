@@ -41,7 +41,7 @@ let level = 1;
 let gameOver = false;
 let clearingRows = [];
 let clearingStartTime = 0;
-const CLEAR_ANIM_DURATION = 600; // Longer for crumbling effect
+const CLEAR_ANIM_DURATION = 600;
 let particles = [];
 
 function preload() { }
@@ -56,6 +56,7 @@ function create() {
     this.spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
     spawnPiece.call(this);
+    setupTouchGestures.call(this);
 }
 
 function spawnPiece() {
@@ -117,14 +118,13 @@ function createParticles(row) {
     for (let c = 0; c < COLS; c++) {
         const color = grid[row][c];
         if (color) {
-            // Break each block into 4 particles
             for (let i = 0; i < 2; i++) {
                 for (let j = 0; j < 2; j++) {
                     particles.push({
                         x: c * BLOCK_SIZE + (i * BLOCK_SIZE / 2),
                         y: row * BLOCK_SIZE + (j * BLOCK_SIZE / 2),
                         vx: (Math.random() - 0.5) * 4,
-                        vy: -Math.random() * 5 - 2, // Burst upwards
+                        vy: -Math.random() * 5 - 2,
                         color: color,
                         size: BLOCK_SIZE / 2,
                         rotation: 0,
@@ -133,7 +133,7 @@ function createParticles(row) {
                     });
                 }
             }
-            grid[row][c] = 0; // Clear from grid immediately so they don't draw twice
+            grid[row][c] = 0;
         }
     }
 }
@@ -148,8 +148,6 @@ function clearLines() {
 
     if (clearingRows.length > 0) {
         clearingStartTime = game.loop.time;
-
-        // Spawn particles for each clearing row
         clearingRows.forEach(r => createParticles(r));
 
         let linesCleared = clearingRows.length;
@@ -169,9 +167,6 @@ function clearLines() {
 }
 
 function finalizeLineClear() {
-    // Note: Rows are already visually "cleared" by particles, 
-    // but we need to actually shift the grid data down.
-    // We filter out 0 rows and fill the top.
     let newGrid = grid.filter(row => !row.every(cell => cell === 0));
     while (newGrid.length < ROWS) {
         newGrid.unshift(Array(COLS).fill(0));
@@ -186,15 +181,13 @@ function finalizeLineClear() {
 function update(time, delta) {
     if (gameOver) return;
 
-    // Handle Animation State
     if (clearingRows.length > 0) {
-        // Update Particles
         particles.forEach(p => {
             p.x += p.vx;
             p.y += p.vy;
-            p.vy += 0.25; // Gravity
+            p.vy += 0.25;
             p.rotation += p.vRotation;
-            p.alpha -= 0.02; // Fade out
+            p.alpha -= 0.02;
         });
 
         if (time - clearingStartTime > CLEAR_ANIM_DURATION) {
@@ -204,7 +197,6 @@ function update(time, delta) {
         return;
     }
 
-    // Normal Game Logic
     if (time - lastDropTime > dropInterval) {
         if (!checkCollision(activePiece.x, activePiece.y + 1, activePiece.shape)) {
             activePiece.y++;
@@ -214,7 +206,6 @@ function update(time, delta) {
         lastDropTime = time;
     }
 
-    // Input
     if (Phaser.Input.Keyboard.JustDown(this.cursors.left)) {
         if (!checkCollision(activePiece.x - 1, activePiece.y, activePiece.shape)) activePiece.x--;
     } else if (Phaser.Input.Keyboard.JustDown(this.cursors.right)) {
@@ -243,7 +234,6 @@ function drawBlock(graphics, x, y, color, alpha = 1, size = BLOCK_SIZE) {
 function draw() {
     this.graphics.clear();
 
-    // Draw Grid background
     this.graphics.lineStyle(1, 0xffffff, 0.05);
     for (let r = 0; r <= ROWS; r++) {
         this.graphics.moveTo(0, r * BLOCK_SIZE);
@@ -255,23 +245,19 @@ function draw() {
     }
     this.graphics.strokePath();
 
-    // Draw Landed Pieces
     grid.forEach((row, r) => {
         row.forEach((color, c) => {
             if (color) drawBlock(this.graphics, c * BLOCK_SIZE, r * BLOCK_SIZE, color);
         });
     });
 
-    // Draw Particles (Crumbling effect)
     particles.forEach(p => {
         if (p.alpha > 0) {
             drawBlock(this.graphics, p.x, p.y, p.color, p.alpha, p.size);
         }
     });
 
-    // Draw Active Piece
     if (activePiece && clearingRows.length === 0) {
-        // Ghost Piece
         let ghostY = activePiece.y;
         while (!checkCollision(activePiece.x, ghostY + 1, activePiece.shape)) ghostY++;
         activePiece.shape.forEach((row, r) => {
@@ -320,46 +306,61 @@ function resetGame() {
     spawnPiece();
 }
 
+// Touch Gestures Implementation
+function setupTouchGestures() {
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    const swipeThreshold = 30; // Min pixels for a swipe
+    const tapThreshold = 200; // Max ms for a tap
+
+    this.input.on('pointerdown', (pointer) => {
+        startX = pointer.x;
+        startY = pointer.y;
+        startTime = game.loop.time;
+    });
+
+    this.input.on('pointerup', (pointer) => {
+        if (gameOver || clearingRows.length > 0) return;
+
+        const deltaX = pointer.x - startX;
+        const deltaY = pointer.y - startY;
+        const duration = game.loop.time - startTime;
+
+        // Detect Swipes
+        if (Math.abs(deltaX) > swipeThreshold || Math.abs(deltaY) > swipeThreshold) {
+            if (Math.abs(deltaX) > Math.abs(deltaY)) {
+                // Horizontal Swipe
+                if (deltaX > swipeThreshold) {
+                    // Swipe Right
+                    if (!checkCollision(activePiece.x + 1, activePiece.y, activePiece.shape)) activePiece.x++;
+                } else if (deltaX < -swipeThreshold) {
+                    // Swipe Left
+                    if (!checkCollision(activePiece.x - 1, activePiece.y, activePiece.shape)) activePiece.x--;
+                }
+            } else {
+                // Vertical Swipe
+                if (deltaY > swipeThreshold) {
+                    // Swipe Down -> Hard Drop
+                    while (!checkCollision(activePiece.x, activePiece.y + 1, activePiece.shape)) {
+                        activePiece.y++;
+                    }
+                    lockPiece();
+                }
+            }
+        }
+        // Detect Tap
+        else if (duration < tapThreshold) {
+            rotatePiece(activePiece);
+        }
+    });
+}
+
 // Event Listeners for UI Buttons
-document.getElementById('play-again-btn').addEventListener('click', () => {
-    resetGame();
-});
+document.getElementById('play-again-btn').addEventListener('click', resetGame);
+document.getElementById('header-restart').addEventListener('click', resetGame);
 
 document.getElementById('quit-btn').addEventListener('click', () => {
     alert("Thanks for playing!");
     window.location.reload();
 });
-
-// Mobile Touch Controls
-const setupTouchControls = () => {
-    const btnLeft = document.getElementById('touch-left');
-    const btnRight = document.getElementById('touch-right');
-    const btnDown = document.getElementById('touch-down');
-    const btnRotate = document.getElementById('touch-rotate');
-    const btnRestart = document.getElementById('touch-restart');
-
-    if (btnLeft) btnLeft.addEventListener('pointerdown', () => {
-        if (gameOver || clearingRows.length > 0) return;
-        if (!checkCollision(activePiece.x - 1, activePiece.y, activePiece.shape)) activePiece.x--;
-    });
-    if (btnRight) btnRight.addEventListener('pointerdown', () => {
-        if (gameOver || clearingRows.length > 0) return;
-        if (!checkCollision(activePiece.x + 1, activePiece.y, activePiece.shape)) activePiece.x++;
-    });
-    if (btnDown) btnDown.addEventListener('pointerdown', () => {
-        if (gameOver || clearingRows.length > 0) return;
-        while (!checkCollision(activePiece.x, activePiece.y + 1, activePiece.shape)) {
-            activePiece.y++;
-        }
-        lockPiece();
-    });
-    if (btnRotate) btnRotate.addEventListener('pointerdown', () => {
-        if (gameOver || clearingRows.length > 0) return;
-        rotatePiece(activePiece);
-    });
-    if (btnRestart) btnRestart.addEventListener('pointerdown', () => {
-        resetGame();
-    });
-};
-
-setupTouchControls();
