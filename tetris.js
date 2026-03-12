@@ -1,5 +1,5 @@
 const config = {
-    type: Phaser.WEBGL,
+    type: Phaser.AUTO,
     width: 300,
     height: 600,
     backgroundColor: 0x111111,
@@ -175,11 +175,9 @@ function drawNextPiece() {
             if (value) {
                 const x = offsetX + c * blockSize;
                 const y = offsetY + r * blockSize;
-                // Draw filled block
-                ctx.beginPath();
-                ctx.roundRect(x, y, blockSize - 1, blockSize - 1, 2);
-                ctx.fill();
-                ctx.stroke();
+                // Use fillRect for broad Android compatibility (roundRect not available pre-Chrome 99)
+                ctx.fillRect(x, y, blockSize - 1, blockSize - 1);
+                ctx.strokeRect(x, y, blockSize - 1, blockSize - 1);
             }
         });
     });
