@@ -149,10 +149,9 @@
             justify-content: space-between;
             align-items: center;
             padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(20, 20, 30, 0.92);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            backdrop-filter: blur(10px);
             box-sizing: border-box;
             flex-shrink: 0;
         }
@@ -214,9 +213,7 @@
             aspect-ratio: 1 / 2;
             border: 3px solid rgba(255, 255, 255, 0.1);
             border-radius: 12px;
-            box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(10px);
+            background: #111111;
             overflow: hidden;
             flex-shrink: 1;
             /* Allow board to shrink if needed */
@@ -273,8 +270,7 @@
         #thank-you-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(15px);
+            background: rgba(10, 10, 15, 0.93);
             display: none;
             flex-direction: column;
             justify-content: center;
@@ -342,6 +338,166 @@
             gap: 6px;
         }
 
+        /* ── Name Entry Screen ── */
+        #name-entry-screen {
+            position: fixed;
+            inset: 0;
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 8000;
+            gap: 28px;
+            padding: 30px;
+            box-sizing: border-box;
+        }
+
+        #name-entry-screen h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(22px, 5vw, 36px);
+            color: #00f0f0;
+            text-shadow: 0 0 30px rgba(0, 240, 240, 0.6);
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            margin: 0;
+            text-align: center;
+        }
+
+        #name-entry-screen p {
+            font-family: 'Inter', sans-serif;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            margin: -16px 0 0;
+            letter-spacing: 1px;
+        }
+
+        #player-name-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(0, 240, 240, 0.4);
+            color: #fff;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 18px;
+            letter-spacing: 3px;
+            text-align: center;
+            padding: 14px 24px;
+            border-radius: 10px;
+            outline: none;
+            width: min(280px, 80vw);
+            text-transform: uppercase;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        #player-name-input:focus {
+            border-color: #00f0f0;
+            box-shadow: 0 0 20px rgba(0, 240, 240, 0.25);
+        }
+
+        #player-name-input::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            letter-spacing: 2px;
+        }
+
+        #start-game-btn {
+            background: linear-gradient(135deg, rgba(0, 240, 240, 0.15), rgba(0, 240, 240, 0.05));
+            border: 1px solid rgba(0, 240, 240, 0.5);
+            color: #00f0f0;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 13px;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            padding: 14px 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
+        }
+
+        #start-game-btn:hover {
+            background: rgba(0, 240, 240, 0.2);
+            box-shadow: 0 0 25px rgba(0, 240, 240, 0.3);
+            transform: translateY(-1px);
+        }
+
+        #start-game-btn:active {
+            transform: translateY(0);
+        }
+
+        /* ── Leaderboard (inside game over overlay) ── */
+        #leaderboard-panel {
+            width: 100%;
+            max-width: 240px;
+            margin-top: 10px;
+        }
+
+        #leaderboard-panel h3 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            color: #00f0f0;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            margin: 0 0 10px;
+            text-align: center;
+        }
+
+        .lb-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1px;
+            background: rgba(255, 255, 255, 0.04);
+            transition: background 0.2s;
+        }
+
+        .lb-row.lb-highlight {
+            background: rgba(0, 240, 240, 0.12);
+            border: 1px solid rgba(0, 240, 240, 0.25);
+        }
+
+        .lb-rank {
+            color: rgba(255, 255, 255, 0.3);
+            width: 18px;
+            text-align: center;
+        }
+
+        .lb-rank.top3 {
+            color: #f0a000;
+        }
+
+        .lb-name {
+            flex: 1;
+            padding: 0 8px;
+            color: rgba(255, 255, 255, 0.85);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .lb-score {
+            color: #00f0f0;
+            min-width: 52px;
+            text-align: right;
+        }
+
+        .lb-empty {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.25);
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            padding: 10px 0;
+        }
+
+        /* Scrollable leaderboard on very small screens */
+        #leaderboard-panel .lb-list {
+            max-height: 140px;
+            overflow-y: auto;
+        }
+
         /* Desktop layout adjustments */
         @media (min-width: 768px) {
             .main-wrapper {
@@ -385,6 +541,12 @@
                 bottom: 15px;
                 width: auto;
             }
+
+            /* Larger leaderboard on desktop */
+            #leaderboard-panel .lb-list {
+                max-height: none;
+                overflow-y: visible;
+            }
         }
 
         /* Small screen height fixes */
@@ -409,6 +571,7 @@
 </head>
 
 <body>
+    <!-- Loading Screen -->
     <div id="loading-screen" aria-live="polite">
         <div class="hourglass-container">
             <svg class="hourglass-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -425,6 +588,15 @@
             </svg>
         </div>
         <div id="hint-text">&nbsp;</div>
+    </div>
+
+    <!-- Name Entry Screen (shown after loading, before game) -->
+    <div id="name-entry-screen" style="display:none;">
+        <h1>Kimathi's Tetris</h1>
+        <p>Enter your name to play</p>
+        <input id="player-name-input" type="text" maxlength="12" placeholder="YOUR NAME" autocomplete="off"
+            spellcheck="false" />
+        <button id="start-game-btn">Play</button>
     </div>
 
     <div class="main-wrapper">
@@ -446,7 +618,12 @@
         <div id="game-container">
             <div id="game-over-overlay">
                 <h2>Game Over</h2>
-                <button class="overlay-btn" id="play-again-btn">Restart</button>
+                <!-- Leaderboard Panel -->
+                <div id="leaderboard-panel">
+                    <h3>🏆 Top 10</h3>
+                    <div class="lb-list" id="leaderboard-list"></div>
+                </div>
+                <button class="overlay-btn" id="play-again-btn" style="margin-top:12px;">Restart</button>
                 <button class="overlay-btn" id="quit-btn"
                     style="background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2);">Quit</button>
             </div>

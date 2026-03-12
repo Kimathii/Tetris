@@ -1,5 +1,5 @@
 const config = {
-    type: Phaser.AUTO,
+    type: Phaser.WEBGL,
     width: 300,
     height: 600,
     backgroundColor: 0x111111,
@@ -44,6 +44,61 @@ let clearingRows = [];
 let clearingStartTime = 0;
 const CLEAR_ANIM_DURATION = 600;
 let particles = [];
+
+// ── Player name & leaderboard (localStorage) ──────────────────────────────
+const LS_NAME = 'tetris_player_name';
+const LS_LB = 'tetris_leaderboard';
+const MAX_LB = 10;
+let playerName = '';
+let scoreSubmittedThisGame = false;
+
+function getLeaderboard() {
+    try { return JSON.parse(localStorage.getItem(LS_LB)) || []; }
+    catch { return []; }
+}
+
+function saveScoreToLeaderboard(name, pts) {
+    const lb = getLeaderboard();
+    lb.push({ name: name.trim() || 'ANON', score: pts });
+    lb.sort((a, b) => b.score - a.score);
+    // Deduplicate: keep only the first (highest) score per name (case-insensitive)
+    const seen = new Set();
+    const deduped = lb.filter(entry => {
+        const key = entry.name.toUpperCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+    deduped.splice(MAX_LB); // keep only top 10
+    localStorage.setItem(LS_LB, JSON.stringify(deduped));
+    return deduped;
+}
+
+function renderLeaderboard(highlightScore) {
+    const list = document.getElementById('leaderboard-list');
+    if (!list) return;
+    const lb = getLeaderboard();
+    if (lb.length === 0) {
+        list.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+        return;
+    }
+    list.innerHTML = lb.map((entry, i) => {
+        const isHighlight = entry.score === highlightScore && i === lb.findIndex(e => e.score === highlightScore);
+        const topCls = i < 3 ? ' top3' : '';
+        const hlCls = isHighlight ? ' lb-highlight' : '';
+        return `<div class="lb-row${hlCls}">
+            <span class="lb-rank${topCls}">${i + 1}</span>
+            <span class="lb-name">${escHtml(entry.name)}</span>
+            <span class="lb-score">${String(entry.score).padStart(4, '0')}</span>
+        </div>`;
+    }).join('');
+}
+
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 function preload() { }
 
@@ -168,24 +223,23 @@ function lockPiece() {
 }
 
 function createParticles(row) {
+    const MAX_PARTICLES = 30;
     for (let c = 0; c < COLS; c++) {
         const color = grid[row][c];
-        if (color) {
-            for (let i = 0; i < 2; i++) {
-                for (let j = 0; j < 2; j++) {
-                    particles.push({
-                        x: c * BLOCK_SIZE + (i * BLOCK_SIZE / 2),
-                        y: row * BLOCK_SIZE + (j * BLOCK_SIZE / 2),
-                        vx: (Math.random() - 0.5) * 4,
-                        vy: -Math.random() * 5 - 2,
-                        color: color,
-                        size: BLOCK_SIZE / 2,
-                        rotation: 0,
-                        vRotation: (Math.random() - 0.5) * 0.2,
-                        alpha: 1
-                    });
-                }
-            }
+        if (color && particles.length < MAX_PARTICLES) {
+            particles.push({
+                x: c * BLOCK_SIZE + BLOCK_SIZE / 2,
+                y: row * BLOCK_SIZE + BLOCK_SIZE / 2,
+                vx: (Math.random() - 0.5) * 4,
+                vy: -Math.random() * 5 - 2,
+                color: color,
+                size: BLOCK_SIZE / 2,
+                rotation: 0,
+                vRotation: (Math.random() - 0.5) * 0.2,
+                alpha: 1
+            });
+            grid[row][c] = 0;
+        } else {
             grid[row][c] = 0;
         }
     }
@@ -233,7 +287,7 @@ function finalizeLineClear() {
 
 function update(time, delta) {
     if (gameOver) {
-        draw.call(this);
+        // Board is static — no need to redraw every frame once game is over
         return;
     }
 
@@ -334,7 +388,23 @@ function draw() {
     }
 }
 
+// Lightweight redraw used only during line-clear animation
+// Skips grid + piece rendering to avoid unnecessary GPU work each frame
+function drawParticlesOnly() {
+    this.graphics.clear();
+    particles.forEach(p => {
+        if (p.alpha > 0) {
+            drawBlock(this.graphics, p.x, p.y, p.color, p.alpha, p.size);
+        }
+    });
+}
+
 function showGameOver() {
+    if (!scoreSubmittedThisGame && score > 0) {
+        scoreSubmittedThisGame = true;
+        saveScoreToLeaderboard(playerName, score);
+    }
+    renderLeaderboard(score);
     const overlay = document.getElementById('game-over-overlay');
     if (overlay) overlay.style.display = 'flex';
 }
@@ -350,7 +420,8 @@ function resetGame() {
     gameOver = false;
     clearingRows = [];
     particles = [];
-    nextPieceType = null; // Reset the queue
+    nextPieceType = null;
+    scoreSubmittedThisGame = false;
 
     const scoreEl = document.getElementById('score');
     if (scoreEl) scoreEl.innerText = '0000';
@@ -472,17 +543,47 @@ function initLoadingScreen() {
         setTimeout(() => {
             loadingScreen.style.display = 'none';
             loadingScreen.style.visibility = 'hidden';
-            mainWrapper.style.display = 'flex';
-
-            // Trigger Phaser resize if needed
-            if (window.game && window.game.scale) {
-                window.game.scale.refresh();
-            }
+            // Show the name entry screen instead of going straight to the game
+            showNameEntry();
         }, 500);
     };
 
     // Set timeout to finish loading after 2 seconds
     setTimeout(finishLoading, 2000);
+}
+
+// ── Name Entry logic ─────────────────────────────────────────────────────
+function showNameEntry() {
+    const screen = document.getElementById('name-entry-screen');
+    const input = document.getElementById('player-name-input');
+    const btn = document.getElementById('start-game-btn');
+    if (!screen || !input || !btn) { startActualGame(); return; }
+
+    // Pre-fill saved name
+    const saved = localStorage.getItem(LS_NAME) || '';
+    input.value = saved;
+    screen.style.display = 'flex';
+
+    // Allow pressing Enter to start
+    input.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Enter') { input.removeEventListener('keydown', handler); confirmName(); }
+    });
+
+    btn.addEventListener('click', confirmName);
+
+    function confirmName() {
+        const name = input.value.trim();
+        playerName = name || 'ANON';
+        if (name) localStorage.setItem(LS_NAME, name);
+        screen.style.display = 'none';
+        startActualGame();
+    }
+}
+
+function startActualGame() {
+    const mainWrapper = document.querySelector('.main-wrapper');
+    if (mainWrapper) mainWrapper.style.display = 'flex';
+    if (window.game && window.game.scale) window.game.scale.refresh();
 }
 
 // Run immediately as the script is at the end of the body
